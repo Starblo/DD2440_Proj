@@ -10,7 +10,7 @@ struct Point {
     double x, y;
 };
 
-int euclideanDistance(const Point& a, const Point& b) {
+double euclideanDistance(const Point& a, const Point& b) {
     return hypot(a.x - b.x, a.y - b.y);
 }
 double tourDistance(const vector<Point>& points, const vector<int>& tour) {
