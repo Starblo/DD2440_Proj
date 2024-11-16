@@ -24,6 +24,8 @@ const double TIME_OUT = 1.95;
 int seed = 123456;
 mt19937 rng(seed);
 
+vector<vector<double>> distanceMatrix;
+
 struct Point {
     double x, y;
 };
@@ -44,19 +46,32 @@ struct Individual {
 inline double euclideanDistance(const Point& a, const Point& b) {
     return hypot(a.x - b.x, a.y - b.y);
 }
-inline double tourDistance(const vector<Point>& points, const vector<int>& tour) {
+
+inline void calDistMatrix(const vector<Point>& points, int N) {
+    distanceMatrix.resize(N, vector<double>(N, 0.0));
+    // 计算距离矩阵
+    for (int i = 0; i < N; ++i) {
+        for (int j = i + 1; j < N; ++j) {
+            double dist = euclideanDistance(points[i], points[j]);
+            distanceMatrix[i][j] = dist;
+            distanceMatrix[j][i] = dist; // 对称赋值
+        }
+    }
+}
+
+inline double tourDistance(const vector<int>& tour) {
     double totalDist = 0.0;
     int N = tour.size();
     for (int i = 0; i < N; ++i) {
         int current = tour[i];
-        int next = tour[(i + 1) % N]; // Ensure the tour is circular
-        totalDist += euclideanDistance(points[current], points[next]);
+        int next = tour[(i + 1) % N]; // 确保路径是循环的
+        totalDist += distanceMatrix[current][next];
     }
     return totalDist;
 }
 
 inline double evaluateFitness(const vector<Point>& points, const vector<int>& tour) {
-    return tourDistance(points, tour);
+    return tourDistance(tour);
 }
 
 inline void twoOptSwap(vector<int>& tour, int i, int k) {
@@ -70,11 +85,10 @@ void twoOpt(const vector<Point>& points, vector<int>& tour) {
         improvement = false;
         for (int i = 1; i < N - 1; ++i) {
             for (int k = i + 1; k < N; ++k) {
-                double delta =
-                        euclideanDistance(points[tour[i - 1]], points[tour[k]]) +
-                        euclideanDistance(points[tour[i]], points[tour[(k + 1) % N]]) -
-                        euclideanDistance(points[tour[i - 1]], points[tour[i]]) -
-                        euclideanDistance(points[tour[k]], points[tour[(k + 1) % N]]);
+                double delta = distanceMatrix[tour[i - 1]][tour[k]] +
+                               distanceMatrix[tour[i]][tour[(k + 1) % N]] -
+                               distanceMatrix[tour[i - 1]][tour[i]] -
+                               distanceMatrix[tour[k]][tour[(k + 1) % N]];
                 if (delta < -1e-6) {
                     twoOptSwap(tour, i, k);
                     improvement = true;
@@ -222,7 +236,7 @@ void greedy_initialize(int N, const vector<Point>& points, vector<int>& tour) {
 
         for (int j = 0; j < N; ++j) {
             if (!visited[j]) {
-                double dist = euclideanDistance(points[current], points[j]);
+                double dist = distanceMatrix[current][j];
                 if (dist < bestDist) {
                     bestDist = dist;
                     best = j;
@@ -262,6 +276,8 @@ int main() {
 
     auto startTime = std::chrono::high_resolution_clock::now();
 
+    calDistMatrix(points, N);
+
     vector<Individual> population;
     initializePopulation(population, points);
 
@@ -276,8 +292,8 @@ int main() {
         if (population[0].fitness < bestIndividual.fitness) {
             bestIndividual = population[0];
         }
-        cout << "Best Individual: " << bestIndividual.fitness << endl;
-        cout << "Iteration: " << iter++ << endl;
+//        cout << "Best Individual: " << bestIndividual.fitness << endl;
+//        cout << "Iteration: " << iter++ << endl;
 
         auto currentTime = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> elapsedTime = currentTime - startTime;
@@ -333,17 +349,14 @@ int main() {
         population = newPopulation;
     }
 
-//    double fitness = evaluateFitness(points, bestIndividual.tour);
-//    cout << "Final fitness: " << fitness << endl;
-//    twoOpt(points, bestIndividual.tour);
-//    fitness = evaluateFitness(points, bestIndividual.tour);
-//    cout << "After 2-opt: " << fitness << endl;
-
 
     // Output the optimized tour
     for (int i = 0; i < N; ++i) {
         cout << bestIndividual.tour[i] << endl;
     }
+
+    double fitness = evaluateFitness(points, bestIndividual.tour);
+    cout << "Final fitness: " << fitness << endl;
 
     return 0;
 }
