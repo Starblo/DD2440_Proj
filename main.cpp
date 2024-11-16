@@ -18,7 +18,7 @@ const double TWO_OPT_MUTATION_RATE = 0.2 + ONE_SEGMENT_INSERTION_MUTATION_RATE;
 const double TWO_SEGMENT_EXCHANGE_MUTATION_RATE = 0.25 + TWO_OPT_MUTATION_RATE;
 
 const int ELITISM_NUM = 5;
-const double TIME_OUT = 1.95;
+const double TIME_OUT = 1.97;
 
 // Random number generator
 int seed = 123456;
@@ -78,7 +78,7 @@ inline void twoOptSwap(vector<int>& tour, int i, int k) {
     reverse(tour.begin() + i, tour.begin() + k + 1);
 }
 
-void twoOpt(const vector<Point>& points, vector<int>& tour) {
+void twoOpt(vector<int>& tour) {
     int N = tour.size();
     bool improvement = true;
     while (improvement) {
@@ -188,6 +188,15 @@ void oneSegmentInsertionMutation(vector<int>& individual) {
     individual.insert(individual.begin() + insertPos, segment.begin(), segment.end());
 }
 
+void singleInsertionOpt(vector<int>& tour) {
+    int N = tour.size();
+    bool improvement = true;
+    while(improvement){
+        improvement = false;
+
+    }
+}
+
 // Swap Two Random Segments
 void twoSegmentExchangeMutation(vector<int>& individual) {
     int N = individual.size();
@@ -254,7 +263,7 @@ void initializePopulation(vector<Individual>& population, const vector<Point>& p
     int N = points.size();
     vector<int> baseTour(N);
     greedy_initialize(N, points, baseTour);
-    twoOpt(points, baseTour);
+    twoOpt(baseTour);
     double baseFitness = evaluateFitness(points, baseTour);
 //    cout << "Base fitness: " << baseFitness << endl;
     population.push_back(Individual(baseTour, baseFitness));
@@ -356,7 +365,7 @@ int main() {
     }
 
     double fitness = evaluateFitness(points, bestIndividual.tour);
-    cout << "Final fitness: " << fitness << endl;
+//    cout << "Final fitness: " << fitness << endl;
 
     return 0;
 }
