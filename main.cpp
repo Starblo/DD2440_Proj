@@ -9,9 +9,10 @@
 
 using namespace std;
 
-const bool DEBUG = true;
+const bool DEBUG = false;
 
 const int SINGLE_OPT_PARAM = 6;
+const double THREE_OPT_TIME_LIMIT = 1.8;
 
 const int POP_SIZE = 50;
 
@@ -223,6 +224,56 @@ void singleOpt(vector<int>& tour) {
     }
 }
 
+// Function to perform 3-opt optimization on the tour
+void threeOpt(vector<int>& tour) {
+    int N = tour.size();
+    bool improved = true;
+    clock_t start_time = clock();
+
+    while (improved) {
+        improved = false;
+        for (int i = 0; i < N - 2; ++i) {
+            for (int j = i + 1; j < N - 1; ++j) {
+                // Check for time limit
+                if ((double)(clock() - start_time) / CLOCKS_PER_SEC > THREE_OPT_TIME_LIMIT) {
+                    return;
+                }
+                for (int k = j + 1; k < N; ++k) {
+                    // Current distances
+                    int A = tour[i], B = tour[(i + 1) % N];
+                    int C = tour[j], D = tour[(j + 1) % N];
+                    int E = tour[k], F = tour[(k + 1) % N];
+
+                    double d0 = distanceMatrix[A][B] + distanceMatrix[C][D] + distanceMatrix[E][F];
+
+                    // Possible 3-opt moves
+                    double d1 = distanceMatrix[A][C] + distanceMatrix[B][D] + distanceMatrix[E][F];
+                    double d2 = distanceMatrix[A][B] + distanceMatrix[C][E] + distanceMatrix[D][F];
+                    double d3 = distanceMatrix[A][D] + distanceMatrix[E][B] + distanceMatrix[C][F];
+                    double d4 = distanceMatrix[F][B] + distanceMatrix[C][D] + distanceMatrix[E][A];
+
+                    if (d1 < d0) {
+                        reverse(tour.begin() + i + 1, tour.begin() + j + 1);
+                        improved = true;
+                    } else if (d2 < d0) {
+                        reverse(tour.begin() + j + 1, tour.begin() + k + 1);
+                        improved = true;
+                    } else if (d3 < d0) {
+                        vector<int> temp;
+                        temp.insert(temp.end(), tour.begin() + j + 1, tour.begin() + k + 1);
+                        temp.insert(temp.end(), tour.begin() + i + 1, tour.begin() + j + 1);
+                        copy(temp.begin(), temp.end(), tour.begin() + i + 1);
+                        improved = true;
+                    } else if (d4 < d0) {
+                        reverse(tour.begin() + i + 1, tour.begin() + k + 1);
+                        improved = true;
+                    }
+                }
+            }
+        }
+    }
+}
+
 // Swap Two Random Segments
 void twoSegmentExchangeMutation(vector<int>& individual) {
     int N = individual.size();
@@ -289,8 +340,12 @@ void initializePopulation(vector<Individual>& population, const vector<Point>& p
     int N = points.size();
     vector<int> baseTour(N);
     greedy_initialize(N, points, baseTour);
+    if(DEBUG){
+        cout << "Before applying OPT fitness:" << evaluateFitness(baseTour) << endl;
+    }
+    threeOpt(baseTour);
     twoOpt(baseTour);
-    singleOpt(baseTour);
+//    singleOpt(baseTour);
     double baseFitness = evaluateFitness(baseTour);
     if(DEBUG){
         cout << "Base fitness: " << baseFitness << endl;
