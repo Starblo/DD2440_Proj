@@ -11,6 +11,8 @@ using namespace std;
 
 const bool DEBUG = true;
 
+const int SINGLE_OPT_PARAM = 6;
+
 const int POP_SIZE = 50;
 
 const double SWAP_MUTATION_RATE = 0.25;
@@ -200,16 +202,17 @@ void singleInsertion(vector<int>& individual, int i, int j, int k){
     }
 }
 
-void singleInsertionOpt(vector<int>& tour) {
+void singleOpt(vector<int>& tour) {
     int N = tour.size();
     bool improvement = true;
     while(improvement){
         improvement = false;
         for(int i = 0; i < N; ++i){ // 片段起始位置
-            for(int j = i; j < N; ++j){ // 片段结束位置 （包含）
+            for(int j = i; j < i + SINGLE_OPT_PARAM & j < N; ++j){ // 片段结束位置 （包含）
                 for(int k = 0; k < N; ++k){ // 插入位置
-                    if(i <= k && k <= j + 1) continue;
-                    double delta = - distanceMatrix[tour[(i - 1 + N) % N]][tour[i]] - distanceMatrix[tour[j]][tour[(j+1) % N]] - distanceMatrix[k][(k-1) % N] + distanceMatrix[tour[(k - 1 + N) % N]][tour[i]] + distanceMatrix[tour[j]][tour[k]] + distanceMatrix[(i - 1 + N) % N][(j+1) %N];
+                    if(i <= k && k <= j + 1 || k == (j + 1) % N) continue;
+                    double delta = - distanceMatrix[tour[(i - 1 + N) % N]][tour[i]] - distanceMatrix[tour[j]][tour[(j+1) % N]] - distanceMatrix[tour[k]][tour[(k - 1 + N) % N]]
+                            + distanceMatrix[tour[(k - 1 + N) % N]][tour[i]] + distanceMatrix[tour[j]][tour[k]] + distanceMatrix[tour[(i - 1 + N) % N]][tour[(j+1) %N]];
                     if(delta < -1e-6){
                         singleInsertion(tour, i, j, k);
                         improvement = true;
@@ -287,13 +290,13 @@ void initializePopulation(vector<Individual>& population, const vector<Point>& p
     vector<int> baseTour(N);
     greedy_initialize(N, points, baseTour);
     twoOpt(baseTour);
-//    singleInsertionOpt(baseTour);
+    singleOpt(baseTour);
     double baseFitness = evaluateFitness(baseTour);
     if(DEBUG){
         cout << "Base fitness: " << baseFitness << endl;
     }
     population.push_back(Individual(baseTour, baseFitness));
-    for (int i = 0; i < POP_SIZE; ++i) {
+    for (int i = 1; i < POP_SIZE; ++i) {
         vector<int> tour = baseTour;
         shuffle(tour.begin(), tour.end(), rng);
         double fitness = evaluateFitness(tour);
@@ -317,6 +320,11 @@ int main() {
     initializePopulation(population, points);
 
     Individual bestIndividual = population[0];
+    auto endTime = std::chrono::high_resolution_clock::now();
+    if(DEBUG){
+        std::chrono::duration<double> elapsedTime = endTime - startTime;
+        cout << "Initialization Time: " << elapsedTime.count() << endl;
+    }
     long iter = 0;
 
     while (true) {
