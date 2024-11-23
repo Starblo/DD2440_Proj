@@ -36,7 +36,7 @@ extern const int ELITISM_NUM;
 extern const double TIME_OUT;
 extern int seed;
 extern std::mt19937 rng;
-extern std::vector<std::vector<double>> distanceMatrix;
+extern std::vector<std::vector<double> > distanceMatrix;
 
 double euclideanDistance(const Point& a, const Point& b);
 void calDistMatrix(const std::vector<Point>& points, int N);

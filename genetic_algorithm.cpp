@@ -8,7 +8,7 @@
 using namespace std;
 
 extern mt19937 rng;
-extern vector<vector<double>> distanceMatrix;
+extern vector<vector<double> > distanceMatrix;
 
 double evaluateFitness(const vector<int>& tour) {
     return tourDistance(tour);

@@ -1,6 +1,6 @@
 OBJS = main.o genetic_algorithm.o two_opt.o
 CC = g++
-CFLAGS = -std=c++11 -Wall
+CFLAGS = -g -O0 -std=c++11 -Wall  # 添加 -g 调试符号，并使用 -O0 禁用优化
 
 all: main
 
