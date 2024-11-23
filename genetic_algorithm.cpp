@@ -122,7 +122,7 @@ void singleOpt(vector<int>& tour) {
         for(int i = 0; i < N; ++i){ // 片段起始位置
             for(int j = i; j < i + SINGLE_OPT_PARAM & j < N; ++j){ // 片段结束位置 （包含）
                 for(int k = 0; k < N; ++k){ // 插入位置
-                    if(i <= k && k <= j + 1 || k == (j + 1) % N) continue;
+                    if((i <= k && k <= j + 1) || k == (j + 1) % N) continue;
                     double delta = - distanceMatrix[tour[(i - 1 + N) % N]][tour[i]] - distanceMatrix[tour[j]][tour[(j+1) % N]] - distanceMatrix[tour[k]][tour[(k - 1 + N) % N]]
                             + distanceMatrix[tour[(k - 1 + N) % N]][tour[i]] + distanceMatrix[tour[j]][tour[k]] + distanceMatrix[tour[(i - 1 + N) % N]][tour[(j+1) %N]];
                     if(delta < -1e-6){

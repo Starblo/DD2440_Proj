@@ -8,6 +8,7 @@
 #include "main.h"
 #include "two_opt.h"
 #include "genetic_algorithm.h"
+#include "christofides.h"
 
 
 using namespace std;
@@ -73,10 +74,19 @@ int main() {
 
     calDistMatrix(points, N);
 
+    // 使用 Christofides 算法生成一个初始解
+    Individual bestIndividual(vector<int>(), 0.0);
+    christofidesAlgorithm(bestIndividual.tour, points);
+    bestIndividual.fitness = evaluateFitness(bestIndividual.tour);
+
+    // 初始化种群，并将 Christofides 生成的路径作为一个初始个体
     vector<Individual> population;
     initializePopulation(population, points);
 
-    Individual bestIndividual = population[0];
+    // 将 Christofides 的解加入到种群中
+    population.push_back(bestIndividual);
+    
+    // Individual bestIndividual = population[0];
     auto endTime = std::chrono::high_resolution_clock::now();
     if(DEBUG){
         std::chrono::duration<double> elapsedTime = endTime - startTime;
@@ -150,7 +160,6 @@ int main() {
 
         population = newPopulation;
     }
-
 
     // Output the optimized tour
     for (int i = 0; i < N; ++i) {
