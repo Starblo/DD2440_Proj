@@ -1,6 +1,7 @@
 #include "genetic_algorithm.h"
 #include "main.h"
 #include "two_opt.h"
+#include "christofides.h"
 #include <algorithm>
 #include <random>
 #include <chrono>
@@ -251,8 +252,11 @@ void initializePopulation(vector<Individual>& population, const vector<Point>& p
     int N = points.size();
     vector<int> baseTour(N);
     greedy_initialize(N, points, baseTour);
+    vector<int> baseTourchris(N);
+    christofidesAlgorithm(baseTourchris, points);
     if(DEBUG){
         cout << "Before applying OPT fitness:" << evaluateFitness(baseTour) << endl;
+        cout << "chris:" << evaluateFitness(baseTourchris) << endl;
     }
     threeOpt(baseTour);
     twoOpt(baseTour);
@@ -262,7 +266,8 @@ void initializePopulation(vector<Individual>& population, const vector<Point>& p
         cout << "Base fitness: " << baseFitness << endl;
     }
     population.push_back(Individual(baseTour, baseFitness));
-    for (int i = 1; i < POP_SIZE; ++i) {
+    population.push_back(Individual(baseTourchris, baseFitness));
+    for (int i = 2; i < POP_SIZE; ++i) {
         vector<int> tour = baseTour;
         shuffle(tour.begin(), tour.end(), rng);
         double fitness = evaluateFitness(tour);

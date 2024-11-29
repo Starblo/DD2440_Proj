@@ -4,101 +4,143 @@
 #include <limits>
 #include <algorithm>
 #include <random>
+#include <stack>
 
 using namespace std;
 
 extern mt19937 rng;
 extern vector<vector<double>> distanceMatrix;
 
+struct Edge {
+    int u, v;
+    double weight;
+    bool operator<(const Edge& other) const {
+        return weight < other.weight;
+    }
+};
+
+class UnionFind {
+public:
+    UnionFind(int n) : parent(n) {
+        for (int i=0; i<n; ++i)
+            parent[i] = i;
+    }
+    int find(int x) {
+        if (parent[x]!=x)
+            parent[x]=find(parent[x]);
+        return parent[x];
+    }
+    void unite(int x, int y) {
+        int fx = find(x);
+        int fy = find(y);
+        if (fx!=fy)
+            parent[fx]=fy;
+    }
+private:
+    vector<int> parent;
+};
+
+vector<Edge> kruskal(int n, vector<Edge>& edges) {
+    UnionFind uf(n);
+    vector<Edge> mst;
+    sort(edges.begin(), edges.end());
+    for (const Edge& e : edges) {
+        if (uf.find(e.u)!=uf.find(e.v)) {
+            uf.unite(e.u, e.v);
+            mst.push_back(e);
+        }
+    }
+    return mst;
+}
+
 void christofidesAlgorithm(vector<int>& tour, const vector<Point>& points) {
-    int N = points.size();
+    int n = points.size();
+    // Step 1: Compute all pairwise distances
+    vector<Edge> edges;
+    for (int i=0; i<n; ++i) {
+        for (int j=i+1; j<n; ++j) {
+            edges.push_back({i, j, distanceMatrix[i][j]});
+        }
+    }
+    // Step 2: Compute MST using Kruskal's algorithm
+    vector<Edge> mst = kruskal(n, edges);
+    // Step 3: Find vertices with odd degree in MST
+    vector<int> degrees(n, 0);
+    for (const Edge& e : mst) {
+        degrees[e.u]++;
+        degrees[e.v]++;
+    }
+    vector<int> odd_vertices;
+    for (int i=0; i<n; ++i) {
+        if (degrees[i]%2==1)
+            odd_vertices.push_back(i);
+    }
+    // Step 4: Compute minimum weight perfect matching on odd degree vertices
+    // We use a greedy approximation here
+    vector<Edge> matching;
+    vector<bool> matched(n, false);
+    vector<Edge> odd_edges;
+    // Build list of all edges between odd-degree vertices
+    for (size_t i=0; i<odd_vertices.size(); ++i) {
+        for (size_t j=i+1; j<odd_vertices.size(); ++j) {
+            int u = odd_vertices[i];
+            int v = odd_vertices[j];
+            odd_edges.push_back({u, v, distanceMatrix[u][v]});
+        }
+    }
+    // Sort edges by weight
+    sort(odd_edges.begin(), odd_edges.end());
+    // Greedily match vertices
+    for (const Edge& e : odd_edges) {
+        if (!matched[e.u] && !matched[e.v]) {
+            matched[e.u] = matched[e.v] = true;
+            matching.push_back(e);
+        }
+    }
+    // Step 5: Combine MST and matching edges to form multigraph
+    vector<vector<int>> multigraph(n);
+    for (const Edge& e : mst) {
+        multigraph[e.u].push_back(e.v);
+        multigraph[e.v].push_back(e.u);
+    }
+    for (const Edge& e : matching) {
+        multigraph[e.u].push_back(e.v);
+        multigraph[e.v].push_back(e.u);
+    }
+    // Step 6: Find Eulerian circuit
+    vector<int> eulerian_tour;
+    stack<int> curr_path;
+    vector<int> circuit;
+    // Copy multigraph to modify during traversal
+    vector<vector<int>> temp_graph = multigraph;
+    curr_path.push(0); // Start from vertex 0
+    int curr_v = 0;
+    while (!curr_path.empty()) {
+        if (!temp_graph[curr_v].empty()) {
+            curr_path.push(curr_v);
+            int next_v = temp_graph[curr_v].back();
+            temp_graph[curr_v].pop_back();
+            // Remove edge from next_v to curr_v
+            auto it = find(temp_graph[next_v].begin(), temp_graph[next_v].end(), curr_v);
+            if (it != temp_graph[next_v].end())
+                temp_graph[next_v].erase(it);
+            curr_v = next_v;
+        } else {
+            circuit.push_back(curr_v);
+            curr_v = curr_path.top();
+            curr_path.pop();
+        }
+    }
+    // Step 7: Convert Eulerian circuit to Hamiltonian circuit
+    reverse(circuit.begin(), circuit.end());
+    vector<bool> visited(n, false);
     tour.clear();
-
-    // Step 1: Construct a Minimum Spanning Tree (MST) using Prim's Algorithm
-    vector<bool> inMST(N, false);
-    vector<double> key(N, numeric_limits<double>::max());
-    vector<int> parent(N, -1);
-    key[0] = 0.0;
-
-    for (int count = 0; count < N - 1; ++count) {
-        double minKey = numeric_limits<double>::max();
-        int u = -1;
-
-        for (int v = 0; v < N; ++v) {
-            if (!inMST[v] && key[v] < minKey) {
-                minKey = key[v];
-                u = v;
-            }
-        }
-
-        if (u == -1) break;
-        inMST[u] = true;
-
-        for (int v = 0; v < N; ++v) {
-            double weight = euclideanDistance(points[u], points[v]);
-            if (!inMST[v] && weight < key[v]) {
-                key[v] = weight;
-                parent[v] = u;
-            }
-        }
-    }
-
-    // Step 2: Add edges of MST to create an Eulerian graph
-    vector<vector<int>> mstGraph(N);
-    for (int v = 1; v < N; ++v) {
-        int u = parent[v];
-        mstGraph[u].push_back(v);
-        mstGraph[v].push_back(u);
-    }
-
-    // Step 3: Find a perfect matching for vertices with odd degree
-    vector<int> oddVertices;
-    for (int i = 0; i < N; ++i) {
-        if (mstGraph[i].size() % 2 != 0) {
-            oddVertices.push_back(i);
-        }
-    }
-
-    vector<bool> matched(N, false);
-    for (int i = 0; i < oddVertices.size(); i += 2) {
-        int u = oddVertices[i];
-        int v = oddVertices[i + 1];
-        mstGraph[u].push_back(v);
-        mstGraph[v].push_back(u);
-    }
-
-    // Step 4: Form an Eulerian circuit using Hierholzer's algorithm
-    vector<bool> visitedEdge(N, false);
-    vector<int> stack;
-    stack.push_back(0);
-
-    while (!stack.empty()) {
-        int u = stack.back();
-        bool found = false;
-
-        for (int v : mstGraph[u]) {
-            if (!visitedEdge[v]) {
-                visitedEdge[v] = true;
-                stack.push_back(v);
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            tour.push_back(u);
-            stack.pop_back();
-        }
-    }
-
-    // Step 5: Shortcut the tour to form a Hamiltonian circuit
-    vector<bool> visited(N, false);
-    vector<int> hamiltonianTour;
-    for (int v : tour) {
+    for (int v : circuit) {
         if (!visited[v]) {
+            tour.push_back(v);
             visited[v] = true;
-            hamiltonianTour.push_back(v);
         }
     }
-    tour = hamiltonianTour;
+    // Close the tour
+    tour.push_back(tour[0]);
 }
